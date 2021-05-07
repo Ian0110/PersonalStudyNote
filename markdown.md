@@ -26,7 +26,7 @@ int main(){
       1. !@#
 
 无序列表
-  
+
   - 123
   - 456
   - 789
@@ -40,10 +40,24 @@ __bold type too__
 ___粗斜体___  
 ***
 插入分隔线
-***  
+***
 ~~删除线~~  
 <u>带下划线</u>  
 
 [GitHub](https://github.com)  
 >文字引用
->>再次引用  
+>
+>>再次引用
+
+流程图   
+
+```mermaid
+graph LR
+a(start) --> b(end)
+f[流程图mermaid]
+```
+
+
+
+
+
