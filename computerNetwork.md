@@ -412,11 +412,11 @@ f[噪声源] --> c
 
 #### 1. C/S结构
 
-1. **服务器**（提供服务的软件）
+1. **C:服务器**（提供服务的软件）
    1. 全时间不间断服务
    2. 永久可访问域名
    3. 利用大量服务器实现可拓展性
-2. **客户机**（使用服务）
+2. **S:客户机**（使用服务）
    1. 间歇性接入网络
    2. 可以使用动态IP地址
    3. 不会与其他客户机直接通信
@@ -483,20 +483,19 @@ f[噪声源] --> c
 2. Internet提供的传输服务
 
    1. TCP服务
-
-   * 面向连接：客户机/服务器进程间需要建立连接
-   * 可靠的传输
-   * 流量控制
-   * 拥塞控制
-   * 不提供时间/延迟保障
-   * 不提供最小带宽保障
+      * 面向连接：客户机/服务器进程间需要建立连接
+      * 可靠的传输
+      * 流量控制
+      * 拥塞控制
+      * 不提供时间/延迟保障
+      * 不提供最小带宽保障
 
    1. UDP服务
+      * 无连接
+      * 不可靠的数据传输
+      * 不提供：可靠性保障、流量控制、拥塞控制、延迟保障、带宽保障
+      * **自由！**
 
-   * 无连接
-   * 不可靠的数据传输
-   * 不提供：可靠性保障、流量控制、拥塞控制、延迟保障、带宽保障
-   * **自由！**
 
 ### 4.Web应用
 
@@ -510,8 +509,291 @@ World Wide Web
   * 基本HTML文件：包含对其它对象引用的链接
 * 对象的寻址
   * URL：统一资源定位器 RFC1738
-  * Scheme(协议)://host(主机域名):port(端口号)/path(路径)
-  * 
+    * Scheme(协议)://host(主机域名):port(端口号)/path(路径)
+* HTTP协议概述
+  * 万维网遵循HTTP(HyperText Transfer Protocol)协议
+  * C/S结构
+    * 客户：请求、接收、展示Web对象
+    * 服务器：响应客户的请求，发送对象
+  * 使用TCP传输服务
+    * 服务器在80端口等待客户的请求
+    * 浏览器发送到服务器的TCP连接(创建套接字Socket)
+    * 服务器接收来自浏览器的TCP连接
+    * 浏览器（HTTP客户端）与Web服务器(HTTP服务器)交换HTTP消息
+    * 关闭TCP连接
+  * 无状态协议
+    * 服务器不维护任何有关客户端过去所发送的信息
+    * **有状态的协议更复杂**
+      * 需要维护
+      * 服务器失效，会产生状态不一致
+* HTTP连接
+  * HTTP连接的两种类型
+    * 非持久性连接
+      * 每个TCP连接最多允许传输一个对象
+      * 例：
+        * 假定用户在浏览器中输入URL：www.someSchool.edu/someDepartment/home.index
+        * 步骤
+          * 1. HTTP客户端向地址的服务器上的HTTP服务器进程（端口80）发起TCP连接请求
+            2. HTTP服务器在端口80等待TCP连接请求，接收连接并通知客户端
+            3. HTTP客户端将HTTP请求消息（包含URL地址）通过TCP连接的套接字发送，消息中所含的URL表明客户端所需要对象
+            4. HTTP服务器收到请求消息，解析，产生包含所需要对象的响应消息，并通过套接字发送给客户端
+            5. HTTP服务器关闭TCP连接
+            6. HTTP客户端收到响应消息，解析HTML文件，显示HTML文件，发现由10个指向jpeg对象的超链接
+            7. 为每个JPEG对象重复步骤1-5
+        * 响应时间分析、建模
+          * RTT(Round Trip Time):从客户端发送一个很小的数据包到服务器并返回所经历的时间
+          * 响应时间：
+            * 发起、建立TCP连接：1RTT
+            * 发送HTTP请求消息到HTTP响应消息的前几个字节到达：1RTT
+            * 响应消息中所含文件的传输时间
+            * TOTAL = 2RTT + 文件传输时间
+        * 问题：
+          1. 每个对象都需要2个RTT
+          2. 操作系统需要为每个TCP连接开销资源
+    * 持久性连接
+      * 每个TCP连接允许传输多个对象
+      * 发送响应后，服务器保持TCP连接的打开，后续的HTTP消息可以通过这个连接发送
+      * 1. 无流水的持久性连接
+           * 客户端只有收到前一个响应后才发送新的请求
+           * 每个被引用的对象耗时1个RTT
+        2. 带有流水机制的持久性连接
+           * 客户端只要遇到一个引用对象就尽快发出请求
+           * 理想情况下，收到所有的引用对象只需耗时约1个RTT
 
+#### HTTP
 
+* HTTP协议有两类消息
+
+  * **请求消息**
+
+    * ASCII码：人直接可读
+
+    * 例:
+
+      ```
+      GET /somedir/page.html HTTP/1.1——请求命令：方法+URL+HTTP版本
+      头部行：
+      Host:www.someschool.edu
+      User-agent:Mozilla/4.0——客户端浏览器
+      Connection:close——连接：发完可以关闭连接
+      Accept-language:fr——支持语言
+      ——空格换行：结束
+      ```
+
+    * 上传输入的方法
+      * Post方法
+        * 网页需要填写表格（form）
+        * 在请求消息的消息体（entity body）中上传客户端的输入
+      * URL方法
+        * 使用GET方法
+        * 输入信息通过request行的URL字段上传
+    * **方法的类型**
+      * HTTP/1.0
+        * GET、POST、**HEAD**(不要把请求的对象放入响应消息中)
+      * HTTP/1.1
+        * GET、POST、HEAD、**PUT**（将消息体中的文件上传到URL字段所指定的路径）、**DELETE**（删除URL字段所指定的文件）
+
+  * **响应消息**
+
+    ```
+    HTTP/1.1 200 ok——请求正常
+    Connection:close
+    Date:Thu,06 Aug 1998 12:00:15 GMT——web服务器生成响应消息的时间
+    Server:Apache/1.3.0(Unix)——软件类型
+    Last-Modified:Mon ,22 Jun 1998.....——上次修改时间
+    Content-Length:6821——内容长度
+    Content-Type:text/html——内容类型
+    ——空行
+    data data data data data data ...——数据
+    ```
+
+    * HTTP响应状态代码
+      * 响应消息的第一行
+        * 例：200（OK）、301（Moved Permanently）、400（Bad Request）、404（Not Found）、505（HTTP Version Not Supported）
+
+#### Cookie技术
+
+* 为什么需要cookie技术
+  * 很多应用需要服务器掌握服务端的状态
+
+* Cookie技术
+  * 某些网站为了辨别用户身份、进行session跟踪而储存在用户本地终端上的数据（通常经过加密）
+  * RFC6265
+* Cookie的组件
+  * HTTP响应消息的cookie头部行
+  * http请求消息的cookie头部行
+  * 保存在客户端主机上的cookie文件，由浏览器管理
+  * Web服务器的后台数据库
+* 用于
+  * 身份认证
+  * 购物车
+  * 推荐
+  * Web e-mail
+* 问题
+  * 隐私
+
+#### Web缓存/代理服务器技术
+
+* 在不访问服务器的前提下满足客户端的HTTP请求
+* 作用
+  * 缩短客户请求的响应时间
+  * 减少机构/组织的流量
+  * 在大范围内（Internet）实现有效的内容分发
+* 实现
+  * Web缓存/代理服务器
+    * 用户设定浏览器通过缓存进行Web访问
+    * 浏览器向缓存/代理服务器发送所有的HTTP请求
+      * 如果所请求对象在缓存中，缓存返回对象
+      * 否则，缓存服务器向原始服务器发送HTTP请求，获取对象，然后返回给服务端并保存该对象
+    * **缓存既充当客户端，也充当服务端**
+    * 一般由ISP架设
+* 条件性GET方法
+  * 如果缓存由最新版本，不需要发送请求对象
+  * **在HTTP请求中声明所持版本的日期**，缓存服务器向服务器发送请求如果是最新版本，服务器响应一条没有对象的消息，内容只有响应状态代码304（Not Modify），如果不是最新版本，就响应最新版本
+
+### 5.E-mail应用
+
+* 构成组件
+  * **邮件客户端**
+    * 读，写Email消息
+    * 与服务器交互，收、发Email消息
+    * Outlook，Foxmail，Thunderbird
+    * Web客户端
+  * **邮件服务器**
+    * **邮箱**：存储发送给给用户的Email
+    * **消息队列**：存储等待发送的Email
+  * **SMTP(Simple Mail Transfer Protocol)协议**
+    * 邮件服务器之间传递消息所使用的协议
+    * 客户端：发送消息的服务器
+    * 服务器：接受消息的服务器
+
+#### SMTP协议
+
+* RFC 2821
+*  使用**TCP**进行email消息的可靠传输
+* 端口25
+* 传输过程中的三个阶段
+  * **握手**
+  * **消息的传输**
+  * **关闭**
+* **命令/响应交互模式**
+  * 命令：ASCII文本
+  * 响应：状态代码和语句
+* Email消息只能包含7位ASCII码
+
+``` 
+S(server):220 hamburger.edu
+c(clint):helo crepes.fr
+s:250 hello crepes.fr,pleased to meet you
+c:mail from:<alice@crepes.fr>
+s:250 alice@crepes.fr....Sender ok
+c:RCPT TO:<bob@hamburger.edu>
+s:250 bob@hamburger.edu.....Recipient ok
+c:data
+s:354 Enter mail,end with "." on a line by itself
+c:do you like ketchup?
+c:how about pickles?
+c:......
+s:250 message accepted for delivery
+c:quit
+s:221 hamburger.edu closing connection
+```
+
+* 特点
+  * 使用持久性连接
+  * 要求消息必须由7位ASCII码构成
+  * SMTP服务器利用CRLF.CRLF确定消息的结束
+* 与HTTP对比
+
+|          |                 SMTP                 |              HTTP              |
+| :------: | :----------------------------------: | :----------------------------: |
+|   方式   |             push（推式）             |          pull（拉式）          |
+|          |       都使用命令/响应交互模式        |                                |
+|          |      命令和状态代码都是ASCII码       |                                |
+| 消息构成 | 多个对象在由多个部分构成的消息中发送 | 每个对象封装在独立的响应消息中 |
+
+#### Email消息格式和与pop3协议
+
+* Email 消息格式
+  * RFC 822：文本消息格式标准
+  * 头部行
+    * to、from、subject
+  * 消息体
+    * 消息本身
+    * 只能是ASCII字符
+  * 多媒体邮件拓展（RFC 2045,2056）
+    * ==通过在邮件头部增加额外的行以生命MIME的内容类型==
+  
+  ```
+  From:alice@crepes.fr
+  To:bob@hamburger.edu
+  Subject:Picture of yummy crepe
+  MIME-Version:1.0
+  Content-Transfer-Encoding:base64
+  Content-Type:image/jpeg
+  
+  base64 encode data data.....
+  base64 encoded data
+  ```
+
+* POP3（Post Office Protocol）协议
+
+  * 认证/授权（客户端-服务器）和下载
+  * 认证阶段
+    * 客户端命令
+      * User：声明用户名
+      * Pass：声明密码
+    * 服务器响应
+      * +ok
+      * -ERR
+  * 事务阶段
+    * List:列出消息数量
+    * Retr：用编号获取消息
+    * Dele：删除消息
+    * Quit
+
+  例：
+
+  ```
+  认证阶段
+  s:+ok POP3 server ready
+  c:user bob
+  s:+ok
+  c:pass hungry
+  s:+ok user successfully logged on
+  事务阶段
+  c:list
+  s:1 498
+  s:2 912
+  s:.
+  c:retr 1
+  s:<message 1 contents>
+  s:.
+  c:dele 1
+  c:retr 2
+  s:<message 1 contents>
+  s:.
+  c:dele 2
+  c:quit
+  s:+ok pop3 server signing off
+  ```
+
+  * 下载并删除模式
+    * 如果换了客户端软件，不能重复查看该邮件
+  * 下载并保持模式
+    * 不同客户端都可以保留消息的拷贝
+  * POP3是无状态协议
+
+* IMAP（Internet Mail Access Protocol）
+
+  * 更复杂
+  * 更多功能
+  * 能够操纵服务器上存储的消息
+  * 所有消息保存在一个地方：服务器
+  * 允许用户利用文件夹组织消息
+  * IMAP支持跨会话（Session）的用户状态：
+    * 文件夹的名字
+    * 文件夹与消息ID之间的映射
+
+* HTTP：163，QQmail等
 
