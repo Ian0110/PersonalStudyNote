@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 #include <fcntl.h>
+#include <string.h>
 int main(void)
 {
 	int i;
@@ -12,6 +13,8 @@ int main(void)
 	putchar('\n');
 
 	char *str = "branch test modify this file and output\n";
-	int fd = write(1,str,sizeof(str));
+	
+	int len = write(STDOUT_FILENO,str,strlen(str)); 
+	printf("string length is %d\n",len);
 	return 0;
 }
